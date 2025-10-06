@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NinjaMockup.ai - Gerador e Editor de Mockups com IA</title>
+    <!-- Carregando Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #8B5CF6; /* Violeta */
+            --color-secondary: #06B6D4; /* Ciano */
+            --color-background: #1F2937; /* Cinza Escuro para Fundo */
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1F2937 0%, #0D131E 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 6rem; /* Espaço para o novo header fixo */
+        }
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .ai-logo-text {
+            color: #8B5CF6; /* Violeta principal */
+        }
+        .style-button, .preset-card, .tool-card {
+            transition: all 0.3s ease;
+        }
+        .style-button:hover, .preset-card:hover, .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+        }
+        .tool-card {
+            background-color: #374151; /* Cor de fundo um pouco mais sólida para contraste */
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .tool-card:hover {
+            border-color: #8B5CF6;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.6);
+        }
+        .loading-spinner {
+            border-top-color: var(--color-primary);
+            border-left-color: var(--color-primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+        /* Estilos para o Modal de Visualização */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: visibility 0s, opacity 0.3s linear;
+        }
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            max-width: 90%;
+            max-height: 80%; 
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease-out;
+            object-fit: contain; 
+        }
+        .modal.open .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Padrão quadriculado para SIMULAR transparência (Mantido como convenção de PNG) */
+        #modalImage {
+            background-image: linear-gradient(45deg, #374151 25%, transparent 25%),
+                              linear-gradient(-45deg, #374151 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #374151 75%),
+                              linear-gradient(-45deg, transparent 75%, #374151 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Header Fixo no Topo com Conta do Usuário -->
+    <header class="fixed top-0 left-0 w-full bg-gray-900/80 backdrop-blur-sm z-50 shadow-lg border-b border-gray-700/50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center h-20 px-4 sm:px-6">
+            <!-- Logo e Título do Aplicativo -->
+            <div class="flex items-center space-x-2">
+                 <!-- Ícone do Ninja em Traços -->
+                <svg class="w-8 h-8 ai-logo-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 0 1 18 0v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <line x1="8" y1="13" x2="16" y2="13"/>
+                    <path d="M12 3v3"/>
+                </svg>
+                <h1 class="text-2xl font-bold text-white tracking-tight hidden sm:block">
+                    Ninja<span class="ai-logo-text">Mockup</span>.ai
+                </h1>
+            </div>
+
+            <!-- Botão/Status da Conta do Usuário (Aba) -->
+            <div class="relative">
+                <button id="accountButton" class="flex items-center space-x-2 py-2 px-3 rounded-full glass-card hover:bg-white/20 transition duration-200 text-sm font-medium text-white shadow-md">
+                    <!-- Ícone de Usuário -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span id="accountStatusDisplay" class="font-semibold">Carregando...</span>
+                </button>
+                
+                <!-- Popup de Detalhes da Conta (Escondido por padrão) -->
+                <div id="accountPopup" class="absolute right-0 mt-2 w-64 glass-card p-4 rounded-xl shadow-2xl hidden z-50">
+                    <p class="text-lg font-bold text-white mb-2">Detalhes da Conta</p>
+                    <hr class="border-gray-600 mb-2">
+                    <p class="text-gray-300 text-sm">Plano Atual:</p>
+                    <p id="popupPlanStatus" class="font-bold text-xl text-yellow-400">...</p>
+                    <p id="popupUserId" class="text-gray-500 text-xs mt-3 break-all">ID: ...</p>
+                    <p id="popupRestriction" class="text-xs text-violet-300 mt-2">Plano Free: Máx. 4 imagens por geração.</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Container Principal do App (Com padding para o header) -->
+    <div class="w-full max-w-4xl mx-auto py-8">
+        
+        <!-- Header Central (Somente Título e Subtítulo - Limpo) -->
+        <header class="text-center mb-8">
+            <h2 class="text-3xl font-semibold text-white tracking-tight sm:hidden">
+                Ninja<span class="ai-logo-text">Mockup</span>.ai
+            </h2>
+            <p class="text-gray-400 mt-2">Crie Mockups de Produto Instantâneos com o Poder da IA Generativa.</p>
+        </header>
+
+        <!-- GRID PRINCIPAL (Contém Geração, Edição e Resultados) -->
+        <div class="grid md:grid-cols-2 gap-8">
+            
+            <!-- PAINEL DE GERAÇÃO (Formulário Original) -->
+            <div id="generationPanel" class="glass-card p-6 rounded-xl space-y-6">
+                <h2 class="text-2xl font-semibold text-white mb-4">Configurar Mockup</h2>
+
+                <!-- Upload de Imagem (Logo) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Envie sua Logo</label> 
+                    <input type="file" id="logoImage" accept="image/*" class="w-full text-sm text-gray-400
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-violet-50 file:text-violet-700
+                        hover:file:bg-violet-100" />
+                </div>
+
+                <!-- Descrição do Contexto (Prompt) -->
+                <div>
+                    <label for="prompt" class="block text-sm font-medium text-gray-300 mb-2">Descreva o Modelo e o Contexto</label>
+                    <textarea id="prompt" rows="3" placeholder="Ex: Coloque a logo em uma caneca de café no balcão de uma cafeteria rústica." 
+                        class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:ring-violet-500 focus:border-violet-500 text-white placeholder-gray-400"></textarea>
+                    <p class="text-xs text-gray-400 mt-1">Se vazio, o NinjaMockup.ai tentará inferir um produto e contexto fotorrealista para sua logo.</p>
+                </div>
+                
+                <!-- Botão de Ferramenta Gemini (Melhorar Prompt) -->
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button id="improvePromptButton" 
+                            class="flex-1 w-full py-2 px-3 rounded-xl text-sm font-bold bg-green-600 text-white hover:bg-green-700 transition duration-300 disabled:opacity-50"
+                            title="Use a IA para refinar e otimizar seu prompt para melhores resultados de imagem.">
+                        ✨ Melhorar Prompt
+                    </button>
+                </div>
+                
+                <!-- Área de Mensagens para LLM -->
+                <div id="llmMessageArea" class="hidden p-3 bg-blue-900/40 text-blue-200 rounded-lg border border-blue-700">
+                    <p id="llmMessageText" class="text-sm"></p>
+                    <div id="llmMessageLoading" class="hidden flex items-center mt-2">
+                         <div class="loading-spinner w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                         <span class="ml-2">Aguardando IA...</span>
+                    </div>
+                    <div id="llmMessageSources" class="mt-2 text-xs text-blue-300"></div>
+                </div>
+                
+                <div id="ideaResultsContainer" class="space-y-4"></div>
+                
+                <!-- CAMPO: Quantidade de Imagens -->
+                <div>
+                    <label for="imageCount" class="block text-sm font-medium text-gray-300 mb-2">Quantas Imagens Gerar?</label>
+                    <select id="imageCount" 
+                        class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:ring-violet-500 focus:border-violet-500 text-white placeholder-gray-400">
+                        <option value="1">1 Imagem</option>
+                        <option value="2">2 Imagens</option>
+                        <option value="4">4 Imagens</option>
+                        <option value="8" id="optionEightImages">8 Imagens (Premium)</option>
+                    </select>
+                    <p id="premiumMessage" class="hidden text-sm mt-2 p-2 bg-yellow-900/40 text-yellow-300 rounded-lg border border-yellow-700">
+                        A opção de 8 Imagens requer o plano **Premium**. Por favor, crie ou acesse sua conta.
+                    </p>
+                </div>
+                
+                <input type="hidden" id="selectedStyle" value="realista">
+
+
+                <!-- Botão de Geração -->
+                <button id="generateButton" class="w-full py-3 rounded-xl font-bold text-lg bg-violet-600 text-white hover:bg-violet-700 transition duration-300 style-button">
+                    Gerar Mockup!
+                </button>
+                
+                <!-- Novo Botão "Gerar Novamente" (Oculto inicialmente) -->
+                <button id="generateAgainButton" class="hidden w-full py-3 rounded-xl font-bold text-lg border border-violet-600 text-violet-300 hover:bg-violet-600/20 transition duration-300">
+                    Gerar Novamente
+                </button>
+            </div>
+            
+            <!-- PAINEL DE EDIÇÃO (Novo - Escondido por padrão) -->
+            <div id="editorPanel" class="glass-card p-6 rounded-xl space-y-6 hidden">
+                 <div class="flex justify-between items-center mb-4">
+                     <h2 class="text-2xl font-semibold text-white">Editar Imagem</h2>
+                     <button id="backToGenerateButton" class="px-3 py-1 text-sm rounded-full bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition duration-300">
+                        ← Voltar para Geração
+                     </button>
+                 </div>
+
+                 <!-- Preview da Imagem a ser Editada -->
+                 <div class="text-center p-3 border-2 border-dashed border-cyan-500/50 rounded-lg bg-gray-800/50">
+                     <p class="text-sm text-gray-400 mb-2">Mockup Selecionado para Edição:</p>
+                     <img id="imageToEditPreview" src="" alt="Imagem a ser Editada" class="w-full max-w-xs mx-auto rounded-xl shadow-lg">
+                 </div>
+                 
+                 <!-- Prompt de Edição -->
+                <div>
+                    <label for="editPrompt" class="block text-sm font-medium text-gray-300 mb-2">O que você gostaria de mudar?</label>
+                    <textarea id="editPrompt" rows="2" placeholder="Ex: Mude de dia para noite, adicione neve, torne a caneca de metal." 
+                        class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:ring-cyan-500 focus:border-cyan-500 text-white placeholder-gray-400"></textarea>
+                </div>
+                
+                <!-- CAMPO: Quantidade de Edições/Variações -->
+                <div>
+                    <label for="editImageCount" class="block text-sm font-medium text-gray-300 mb-2">Quantas Variações Gerar?</label>
+                    <select id="editImageCount" 
+                        class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:ring-cyan-500 focus:border-cyan-500 text-white placeholder-gray-400">
+                        <option value="1">1 Variação</option>
+                        <option value="2">2 Variações</option>
+                        <option value="4">4 Variações</option>
+                        <option value="8" id="editOptionEightImages">8 Variações (Premium)</option>
+                    </select>
+                    <p id="editPremiumMessage" class="hidden text-sm mt-2 p-2 bg-yellow-900/40 text-yellow-300 rounded-lg border border-yellow-700">
+                        A opção de 8 Variações requer o plano **Premium**.
+                    </p>
+                </div>
+
+                <!-- Botão de Iniciar Edição (Texto fixo) -->
+                <button id="startEditButton" class="w-full py-3 rounded-xl font-bold text-lg bg-cyan-600 text-white hover:bg-cyan-700 transition duration-300 style-button">
+                    Aplicar Edição
+                </button>
+            </div>
+
+
+            <!-- Área de Resultados (Direita) -->
+            <div id="resultsWrapper" class="glass-card p-6 rounded-xl space-y-4">
+                <h2 class="text-2xl font-semibold text-white mb-4">Resultado</h2>
+                
+                <div id="resultArea" class="min-h-[300px] flex items-center justify-center relative">
+                    <p id="initialMessage" class="text-gray-400 text-center">Os mockups gerados aparecerão aqui após a criação.</p>
+                    
+                    <!-- Indicador de Carregamento Principal (AGORA COM BOTÃO DE CANCELAR) -->
+                    <div id="loading" class="hidden flex-col items-center justify-center">
+                        <div class="loading-spinner w-12 h-12 border-4 border-gray-300 rounded-full border-t-4 border-l-4 border-r-4"></div>
+                        <p id="loadingText" class="text-white mt-3">Iniciando geração...</p>
+                        <!-- Botão de Cancelar Geração -->
+                        <button id="cancelButton" class="mt-4 px-4 py-2 text-sm font-semibold rounded-full bg-red-600 text-white hover:bg-red-700 transition duration-300">
+                            Cancelar Processo
+                        </button>
+                    </div>
+                    
+                    <!-- Imagem de Resultado -->
+                    <div id="mockupResults" class="grid grid-cols-1 gap-4 w-full">
+                        <!-- Imagens geradas ou editadas serão inseridas aqui -->
+                    </div>
+                </div>
+
+                <!-- Área de Mensagens de Erro -->
+                <div id="errorMessage" class="hidden p-3 bg-red-800/30 text-red-300 rounded-lg border border-red-700"></div>
+            </div>
+        </div>
+
+        <!-- Seção: Modelos Prontos de Inspiração -->
+        <div class="mt-8 glass-card p-6 rounded-xl space-y-4">
+            <h2 class="text-2xl font-semibold text-white">Inspiração e Modelos Prontos</h2>
+            <p class="text-gray-400">Clique em um exemplo abaixo para preencher o campo de descrição e gerar seu mockup.</p> 
+            <div id="presetExamplesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                <!-- Cards serão injetados aqui pelo JS -->
+            </div>
+        </div>
+        
+        <!-- NOVA SEÇÃO: Outras Ferramentas de IA -->
+        <div class="mt-8 glass-card p-6 rounded-xl space-y-4">
+            <h2 class="text-2xl font-semibold text-white">Outras Ferramentas de IA</h2>
+            <p class="text-gray-400">Vá além dos mockups. Explore outras formas criativas de transformar suas imagens e ideias.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                <!-- Card 1: Foto Estilo LEGO -->
+                <div class="tool-card bg-gray-800 border-2 border-gray-700 hover:border-violet-500 flex flex-col sm:flex-row items-center p-4">
+                    <div class="w-full sm:w-1/3 flex-shrink-0 mb-4 sm:mb-0 sm:mr-4">
+                        <img src="Captura de tela 2025-10-06 113408.png" 
+                             alt="Exemplo de Imagem Estilo Lego" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/150x150/1F2937/FACC15?text=LEGO';"
+                             class="rounded-lg w-full h-auto object-cover border border-yellow-500/50">
+                    </div>
+                    <div class="w-full sm:w-2/3 text-center sm:text-left">
+                        <h3 class="text-xl font-bold text-white mb-1">Foto Estilo LEGO</h3>
+                        <p class="text-gray-400 text-sm mb-3 line-clamp-2">
+                            Transforme qualquer foto sua ou de uma cena em uma figura 3D do estilo Lego! Perfeito para criar avatares divertidos.
+                        </p>
+                        <button onclick="simulateLandingPage('Foto Estilo LEGO')" class="w-full sm:w-auto py-2 px-4 rounded-full font-semibold text-sm bg-cyan-600 text-white hover:bg-cyan-700 transition duration-300">
+                            Experimentar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 2: Kit de Mídias Sociais Completo -->
+                <div class="tool-card bg-gray-800 border-2 border-gray-700 hover:border-violet-500 flex flex-col sm:flex-row items-center p-4">
+                    <div class="w-full sm:w-1/3 flex-shrink-0 mb-4 sm:mb-0 sm:mr-4">
+                        <img src="Captura de tela 2025-10-06 113821.png" 
+                             alt="Exemplo de Kit de Mídias Sociais" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/150x150/1F2937/8B5CF6?text=MÍDIAS';"
+                             class="rounded-lg w-full h-auto object-cover border border-violet-500/50">
+                    </div>
+                    <div class="w-full sm:w-2/3 text-center sm:text-left">
+                        <h3 class="text-xl font-bold text-white mb-1">Kit de Mídias Sociais</h3>
+                        <p class="text-gray-400 text-sm mb-3 line-clamp-2">
+                            Gere instantaneamente um conjunto completo de banners, posts e capas otimizados para Instagram, Facebook e YouTube.
+                        </p>
+                        <button onclick="simulateLandingPage('Kit de Mídias Sociais')" class="w-full sm:w-auto py-2 px-4 rounded-full font-semibold text-sm bg-cyan-600 text-white hover:bg-cyan-700 transition duration-300">
+                            Experimentar
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Modal para Visualização em Tela Cheia -->
+    <div id="fullscreenModal" class="modal" onclick="closeModal()">
+        
+        <img id="modalImage" src="" alt="Mockup em Tela Cheia" class="modal-content">
+        
+        <!-- Botão de Fechar (SVG) -->
+        <button class="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/40 text-white rounded-full transition duration-200" onclick="event.stopPropagation(); closeModal();">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <!-- Botão de Download na Tela Cheia -->
+        <a id="modalDownloadButton" href="#" download="ninjamockup_fullscreen.png" 
+           class="absolute top-4 right-20 p-3 bg-violet-600 hover:bg-violet-700 text-white rounded-full transition duration-200" 
+           onclick="event.stopPropagation()">
+            <!-- Ícone de Download -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L10 11.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z" clip-rule="evenodd" />
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v7a1 1 0 11-2 0V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+        </a>
+    </div>
+
+    <script type="module">
+        // Importações e Configurações de IA
+        const apiKey = ""; 
+        const imageGenerationModel = 'gemini-2.5-flash-image-preview'; 
+        const textGenerationModel = 'gemini-2.5-flash-preview-05-20'; // Modelo para LLM Textual
+        const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${imageGenerationModel}:generateContent?key=${apiKey}`;
+        const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${textGenerationModel}:generateContent?key=${apiKey}`;
+
+
+        // Importações e Configurações de Firebase (para autenticação)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        let db, auth;
+        let userId = null;
+        let isPremium = false; // Flag para determinar acesso a 8 imagens
+        let isCancelled = false; // Flag para permitir o cancelamento da geração.
+
+        // Elementos do DOM
+        const generateButton = document.getElementById('generateButton');
+        const generateAgainButton = document.getElementById('generateAgainButton');
+        const logoImageInput = document.getElementById('logoImage');
+        const promptInput = document.getElementById('prompt');
+        const selectedStyleInput = document.getElementById('selectedStyle'); 
+        const imageCountInput = document.getElementById('imageCount'); 
+        const optionEightImages = document.getElementById('optionEightImages');
+        const loadingDiv = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText'); 
+        const resultsWrapper = document.getElementById('resultsWrapper'); // Novo wrapper
+        const resultArea = document.getElementById('mockupResults');
+        const initialMessage = document.getElementById('initialMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const presetExamplesContainer = document.getElementById('presetExamplesContainer'); 
+        const premiumMessage = document.getElementById('premiumMessage');
+        const cancelButton = document.getElementById('cancelButton'); 
+        
+        // Elementos da Conta
+        const accountButton = document.getElementById('accountButton');
+        const accountPopup = document.getElementById('accountPopup');
+        const accountStatusDisplay = document.getElementById('accountStatusDisplay');
+        const popupPlanStatus = document.getElementById('popupPlanStatus');
+        const popupUserId = document.getElementById('popupUserId');
+        const popupRestriction = document.getElementById('popupRestriction');
+
+        // NOVOS ELEMENTOS LLM (Melhorar Prompt)
+        const improvePromptButton = document.getElementById('improvePromptButton');
+        const llmMessageArea = document.getElementById('llmMessageArea');
+        const llmMessageText = document.getElementById('llmMessageText');
+        const llmMessageLoading = document.getElementById('llmMessageLoading');
+        const llmMessageSources = document.getElementById('llmMessageSources');
+        const ideaResultsContainer = document.getElementById('ideaResultsContainer'); 
+
+        // Elementos do Modal
+        const fullscreenModal = document.getElementById('fullscreenModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalDownloadButton = document.getElementById('modalDownloadButton'); 
+        
+        // NOVOS ELEMENTOS DE EDIÇÃO
+        const generationPanel = document.getElementById('generationPanel');
+        const editorPanel = document.getElementById('editorPanel');
+        const imageToEditPreview = document.getElementById('imageToEditPreview');
+        const editPromptInput = document.getElementById('editPrompt');
+        const startEditButton = document.getElementById('startEditButton');
+        const backToGenerateButton = document.getElementById('backToGenerateButton');
+        const editImageCountInput = document.getElementById('editImageCount'); 
+        const editOptionEightImages = document.getElementById('editOptionEightImages');
+        const editPremiumMessage = document.getElementById('editPremiumMessage');
+        
+        
+        let currentImageBase64 = null;
+        let currentImageMimeType = null;
+
+
+        // --- PROMPT DE FALLBACK FORTE (Para quando a descrição estiver vazia) ---
+        // Garante que, mesmo sem descrição, um mockup realista seja gerado.
+        const FALLBACK_PROMPT = "Crie um mockup fotorrealista de um produto comercial popular (como um livro, garrafa, embalagem, ou camiseta) em um ambiente limpo e bem iluminado. Use a logo de entrada como o design principal no produto.";
+        
+        // --- INSTRUÇÃO DE SISTEMA CRÍTICA (PARA FORÇAR O USO DA LOGO) ---
+        const CRITICAL_SYSTEM_INSTRUCTION = "SUA ÚNICA TAREFA É CRIAR UM MOCKUP. VOCÊ DEVE APLICAR A IMAGEM DE ENTRADA (A LOGO) NO PRODUTO DESCRITO DE FORMA EXATA E CRÍVEL, SEM SUBSTITUIR, ALTERAR OU USAR UM DESIGN DIFERENTE DA LOGO ORIGINAL.";
+
+
+        // --- EXEMPLOS DE PROMPTS PRONTOS com URL de PREVIEW ---
+        const presetExamples = [
+            { 
+                title: "Caneca Rústica", 
+                prompt: "Coloque a logo em uma caneca de café no balcão de uma cafeteria rústica. Iluminação natural, plano de fundo levemente desfocado.", 
+                style: "realista", 
+                previewUrl: "image (47).jpg" 
+            },
+            { 
+                title: "Camiseta Urbana", 
+                prompt: "A logo em uma camiseta preta no estilo 'streetwear', exibida por um modelo em uma rua urbana à noite. Iluminação dramática.", 
+                style: "realista", 
+                previewUrl: "image_83addf.png" 
+            },
+            { 
+                title: "Embalagem Texturizada", 
+                prompt: "A logo em um rótulo de garrafa de vidro escuro, com plano de fundo em um tecido de textura rústica (couro ou juta).", 
+                style: "realista", 
+                previewUrl: "estilo (2).jpg" 
+            },
+            { 
+                title: "Tela de Notebook", 
+                prompt: "A logo como um ícone de software em uma tela de notebook de alta resolução, com foco no produto. Fundo desfocado de escritório moderno.", 
+                style: "realista", 
+                previewUrl: "Captura de tela 2025-10-06 113056.jpg" 
+            },
+            { 
+                title: "Mockup de Livro", 
+                prompt: "A logo na capa de um livro de capa dura sobre uma mesa de madeira escura com pouca luz e foco dramático.", 
+                style: "realista", 
+                previewUrl: "image_83b4a8.png" 
+            },
+        ];
+        
+        // --- 1. Lógica do Modal e Popups ---
+        /**
+         * Abre o modal de visualização.
+         * @param {string} imageUrl - O Data URL da imagem.
+         */
+        window.openModal = function(imageUrl) {
+            modalImage.src = imageUrl;
+            
+            // 1. Controle do Fundo Quadriculado (SIMULAÇÃO DE TRANSPARÊNCIA)
+            // Se a imagem for PNG (ou outro formato que suporte transparência), usamos o checkerboard CSS
+            if (imageUrl.includes('data:image/png') || imageUrl.includes('data:image/webp')) {
+                 modalImage.classList.add('bg-checker'); 
+            } else {
+                modalImage.classList.remove('bg-checker');
+            }
+            
+            // 2. ATUALIZA O LINK DE DOWNLOAD DO MODAL
+            modalDownloadButton.href = imageUrl;
+            modalDownloadButton.download = `ninjamockup_fullscreen_${Date.now()}.png`; 
+            
+            fullscreenModal.classList.add('open');
+        }
+
+        window.closeModal = function() {
+            fullscreenModal.classList.remove('open');
+        }
+        
+        // Função para simular a navegação para outras ferramentas
+        window.simulateLandingPage = function(toolName) {
+            const message = `Você seria direcionado(a) para a landing page da ferramenta "${toolName}". Como estamos no NinjaMockup.ai, esta ação é apenas uma simulação.`;
+            // Usa o campo de erro/mensagem para mostrar a simulação
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            // Remove todas as classes de cor de erro para a simulação, apenas para garantir
+            errorMessage.classList.remove('bg-red-800/30', 'bg-yellow-900/40', 'text-red-300', 'text-yellow-300', 'border-red-700', 'border-yellow-700'); 
+            errorMessage.classList.add('bg-blue-900/40', 'text-blue-300', 'border-blue-700');
+
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+                // Restaura o estado de erro, se houver, ou limpa
+                errorMessage.classList.remove('bg-blue-900/40', 'text-blue-300', 'border-blue-700');
+            }, 5000);
+        }
+        
+        // Função para alternar o popup da conta
+        function toggleAccountPopup(event) {
+            event.stopPropagation(); // Previne fechar imediatamente se for um clique fora
+            accountPopup.classList.toggle('hidden');
+        }
+        
+        // Fech o popup se clicar fora dele
+        document.addEventListener('click', (event) => {
+            if (!accountButton.contains(event.target) && !accountPopup.contains(event.target)) {
+                accountPopup.classList.add('hidden');
+            }
+        });
+
+
+        // --- 2. Lógica de Renderização e Clique dos Exemplos Prontos ---
+        function renderPresetExamples() {
+            presetExamplesContainer.innerHTML = '';
+            presetExamples.forEach(example => {
+                const card = document.createElement('div');
+                card.className = "preset-card bg-gray-700/50 border border-gray-600 rounded-xl overflow-hidden shadow-lg transform hover:scale-[1.02] cursor-pointer";
+                
+                card.innerHTML = `
+                    <div class="h-28 w-full">
+                        <!-- Usando o nome do arquivo diretamente. Se falhar, usa um placeholder -->
+                        <img src="${example.previewUrl}" alt="${example.title} Preview" 
+                             onerror="this.onerror=null;this.src='https://placehold.co/150x150/8B5CF6/FFFFFF?text=Preview';" 
+                             class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-3">
+                        <p class="text-sm font-bold text-white mb-1 truncate">${example.title}</p>
+                        <p class="text-xs text-gray-400 h-8 line-clamp-2">${example.prompt}</p>
+                        <span class="inline-block mt-2 px-2 py-1 text-xs font-medium rounded-full bg-violet-600/30 text-violet-300">
+                            REALISTA
+                        </span>
+                        <button class="w-full mt-2 py-1 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition duration-200">
+                            Usar Modelo
+                        </button>
+                    </div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    // 1. Preenche o prompt
+                    promptInput.value = example.prompt;
+                    
+                    // 2. Scroll para o topo do formulário
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+                
+                presetExamplesContainer.appendChild(card);
+            });
+        }
+        
+        // --- 3. Funções de Utilidade (Base64 e Exponential Backoff) ---
+
+        /**
+         * Converte o Blob de uma imagem em string Base64.
+         */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Pega apenas a parte Base64
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        /**
+         * Executa a chamada de API com Exponential Backoff.
+         */
+        async function fetchWithBackoff(apiCall, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await apiCall();
+                    if (response.status !== 429 && response.ok) {
+                        return response;
+                    }
+                    
+                    if (response.status === 401 || response.status === 403) {
+                        const errorDetail = await response.text();
+                        console.error("Detalhe do erro de Autenticação (Console):", errorDetail);
+                        throw new Error(`Erro de Autenticação (Código ${response.status}): A chave da API pode estar inválida ou o acesso ao modelo não está autorizado.`);
+                    }
+
+                    if (response.status === 429 && i < maxRetries - 1) {
+                        console.warn(`Tentativa ${i + 1} falhou (Rate Limit). Tentando novamente...`);
+                    } else if (response.status === 500 && i < maxRetries - 1) {
+                        console.error(`Tentativa ${i + 1} falhou (Erro Interno do Servidor). Tentando novamente...`);
+                    } else if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Erro na API: ${response.status} - ${errorText}`);
+                    }
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    console.error("Erro na tentativa", i + 1, error.message);
+                }
+                
+                const delay = Math.pow(2, i) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            throw new Error("Falha na chamada da API após várias tentativas.");
+        }
+        
+        // --- 4. Lógica de Autenticação e Verificação Premium ---
+
+        function updateUiForAuth(user) {
+            const isAnon = user && user.isAnonymous;
+            
+            if (user && user.isPremiumUser) { 
+                userId = user.uid;
+                isPremium = true;
+                
+                // UI Principal (Botão)
+                accountStatusDisplay.textContent = 'Premium';
+                accountStatusDisplay.classList.remove('text-yellow-400');
+                accountStatusDisplay.classList.add('text-green-400');
+                
+                // Popup de Detalhes
+                popupPlanStatus.textContent = 'Plano PREMIUM';
+                popupPlanStatus.className = 'font-bold text-xl text-green-400';
+                popupUserId.textContent = `ID: ${userId}`;
+                popupRestriction.textContent = 'Acesso total: 8 imagens por geração.';
+                popupRestriction.className = 'text-xs text-green-300 mt-2';
+
+                // Geração
+                optionEightImages.disabled = false;
+                premiumMessage.classList.add('hidden');
+                
+                // Edição
+                editOptionEightImages.disabled = false;
+                editPremiumMessage.classList.add('hidden');
+                
+            } else {
+                // Usuário Anônimo (Free)
+                userId = user ? user.uid : crypto.randomUUID(); 
+                isPremium = false;
+                
+                // UI Principal (Botão)
+                accountStatusDisplay.textContent = 'Free';
+                accountStatusDisplay.classList.remove('text-green-400');
+                accountStatusDisplay.classList.add('text-yellow-400');
+                
+                // Popup de Detalhes
+                popupPlanStatus.textContent = 'Plano FREE';
+                popupPlanStatus.className = 'font-bold text-xl text-yellow-400';
+                popupUserId.textContent = `ID: ${userId}`;
+                popupRestriction.textContent = 'Restrição: Máx. 4 imagens por geração.';
+                popupRestriction.className = 'text-xs text-yellow-300 mt-2';
+
+                // Geração
+                optionEightImages.disabled = true;
+                
+                // Se a opção 8 estiver selecionada, força para 4 e mostra a mensagem premium
+                if (imageCountInput.value === '8') {
+                    imageCountInput.value = '4';
+                    premiumMessage.classList.remove('hidden');
+                }
+
+                // Edição
+                editOptionEightImages.disabled = true;
+                
+                // Se a opção 8 estiver selecionada na edição, força para 4 e mostra a mensagem premium
+                if (editImageCountInput.value === '8') {
+                    editImageCountInput.value = '4';
+                    editPremiumMessage.classList.remove('hidden');
+                }
+            }
+        }
+        
+        async function setupFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                
+                // 1. Tenta autenticar com token customizado (Premium)
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialAuthToken) {
+                    const userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                    // Adiciona uma flag de premium
+                    userCredential.user.isPremiumUser = true; 
+                    updateUiForAuth(userCredential.user);
+                } else {
+                    // 2. Fallback para login anônimo (Free)
+                    const userCredential = await signInAnonymously(auth);
+                    userCredential.user.isPremiumUser = false; // Marca como não premium
+                    updateUiForAuth(userCredential.user);
+                }
+                
+            } catch (error) {
+                console.error("Erro na inicialização ou autenticação do Firebase:", error);
+                // Continua como Free se a auth falhar
+                updateUiForAuth(null);
+            }
+        }
+        
+        // --- 5. Lógica da Ferramenta LLM (Melhorar Prompt) ---
+
+        function setLLMLoading(isLoading, message = 'Processando com IA...') {
+            llmMessageArea.classList.remove('hidden', 'bg-red-900/40', 'bg-blue-900/40');
+            llmMessageArea.classList.add('p-3', 'border-blue-700');
+            llmMessageText.innerHTML = '';
+            llmMessageSources.innerHTML = '';
+            ideaResultsContainer.innerHTML = ''; // Limpa as ideias (embora não sejam usadas)
+
+            if (isLoading) {
+                llmMessageLoading.classList.remove('hidden');
+                llmMessageText.textContent = message;
+                improvePromptButton.disabled = true;
+            } else {
+                llmMessageLoading.classList.add('hidden');
+                improvePromptButton.disabled = false;
+            }
+        }
+
+        function showLLMResult(text, sources = [], isError = false) {
+            setLLMLoading(false);
+            llmMessageArea.classList.remove('bg-blue-900/40', 'bg-red-900/40');
+            llmMessageArea.classList.add(isError ? 'bg-red-900/40' : 'bg-blue-900/40');
+            llmMessageArea.classList.remove('hidden');
+            llmMessageText.innerHTML = isError ? `**ERRO:** ${text}` : text;
+            llmMessageSources.innerHTML = '';
+
+            if (sources.length > 0) {
+                const sourceList = sources.map(s => 
+                    `<a href="${s.uri}" target="_blank" class="text-xs text-blue-300 hover:text-blue-100 underline block">${s.title || s.uri}</a>`
+                ).join('');
+                llmMessageSources.innerHTML = `<p class="font-bold mt-2">Fontes Consultadas:</p>${sourceList}`;
+            }
+        }
+        
+        /**
+         * 5.1 Melhorar Prompt (LLM Textual)
+         */
+        async function handleImprovePrompt() {
+            const currentPrompt = promptInput.value.trim();
+            if (!currentPrompt) {
+                showLLMResult("Por favor, preencha o campo de descrição (Prompt) para que a IA possa melhorá-lo.", [], true);
+                return;
+            }
+
+            setLLMLoading(true, 'A IA está melhorando sua descrição...');
+            ideaResultsContainer.innerHTML = ''; 
+
+            // Simulação da lógica da IA 
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // PROMPT REFINADO: Focado em realismo, iluminação, e qualidade de imagem.
+            const refined = `[Versão Otimizada - Foco em Realismo Extremo] Crie um mockup fotorrealista de um produto ${currentPrompt.toLowerCase().replace('coloque a logo em', 'produto')}. Use iluminação de estúdio profissional (softbox principal e luz de preenchimento), lente prime de 50mm, profundidade de campo rasa (bokeh), resolução 8K. Foco nítido na logo com textura e detalhes de alto relevo.`;
+            
+            promptInput.value = refined; // Atualiza o campo de prompt
+            showLLMResult(`**Prompt Otimizado com sucesso!** A nova descrição, focada em alta qualidade e realismo, foi aplicada ao campo de descrição.`, []);
+            
+        }
+
+        // --- 6. Lógica de Edição de Imagem (Image-to-Image) ---
+        
+        /**
+         * 6.1 Abre o Painel de Edição
+         * @param {string} base64Data - A imagem (logo ou mockup anterior) para ser a referência.
+         * @param {string} mimeType - O MIME type da imagem de referência.
+         */
+        window.openEditor = function(base64Data, mimeType) {
+            currentImageBase64 = base64Data;
+            currentImageMimeType = mimeType;
+            
+            imageToEditPreview.src = `data:${mimeType};base64,${base64Data}`;
+            
+            // Esconde o painel de geração e mostra o de edição
+            generationPanel.classList.add('hidden');
+            editorPanel.classList.remove('hidden');
+            
+            // Define o valor padrão para 1 variação
+            editImageCountInput.value = '1'; 
+
+            // Se o Premium for necessário, verifica e exibe a mensagem (embora não deva acontecer com '1')
+            if (isPremium) {
+                editPremiumMessage.classList.add('hidden');
+            } else {
+                editOptionEightImages.disabled = true;
+            }
+            
+            // Limpa os resultados para mostrar apenas a edição
+            resultArea.innerHTML = '';
+            resultArea.className = "grid grid-cols-2 gap-4 w-full"; 
+            initialMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden'); 
+
+            // Coloca a imagem a ser editada na área de resultados como o primeiro item e um título
+            resultArea.innerHTML = `
+                <div class="col-span-full text-center p-4">
+                    <h3 class="text-xl text-white font-semibold mb-3">Imagem Selecionada (Referência)</h3>
+                    <img src="data:${mimeType};base64,${base64Data}" class="w-full max-w-sm mx-auto rounded-xl shadow-xl border border-cyan-500/50" />
+                </div>
+                <hr class="border-gray-700 my-4 col-span-full">
+                <h3 class="text-xl text-white font-semibold mb-3 col-span-full">Novas Variações Editadas:</h3>
+                <div id="editResultsContainer" class="col-span-full grid grid-cols-2 gap-4">
+                    <!-- As novas variações serão inseridas aqui -->
+                </div>
+            `;
+            
+            // Rolagem para o topo do editor
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        /**
+         * 6.2 Fecha o Painel de Edição e Volta para Geração
+         */
+        function closeEditor() {
+            currentImageBase64 = null;
+            currentImageMimeType = null;
+            editPromptInput.value = '';
+            
+            editorPanel.classList.add('hidden');
+            generationPanel.classList.remove('hidden');
+            
+            // Limpa resultados e mostra a mensagem inicial
+            resultArea.innerHTML = '';
+            initialMessage.classList.remove('hidden');
+            
+            // Garante que o botão Gerar esteja visível
+            generateButton.classList.remove('hidden');
+            generateAgainButton.classList.add('hidden');
+            
+            // Volta para o layout de geração (1 coluna, ou o que for o padrão)
+            const count = parseInt(imageCountInput.value, 10);
+            if (count > 2) {
+                 resultArea.className = "grid grid-cols-2 gap-4 w-full";
+             } else {
+                 resultArea.className = "grid grid-cols-1 gap-4 w-full";
+             }
+            
+            // Reajusta o texto inicial na área de resultados para refletir o modo de geração
+             initialMessage.textContent = `Os ${count} mockups gerados aparecerão aqui após a criação.`;
+        }
+
+        /**
+         * 6.3 Processa a Edição da Imagem (Image-to-Image)
+         */
+        async function handleEditImage() {
+            const editPrompt = editPromptInput.value.trim();
+            const numImages = parseInt(editImageCountInput.value, 10); 
+            const editResultsContainer = document.getElementById('editResultsContainer');
+
+            if (numImages === 8 && !isPremium) {
+                errorMessage.textContent = "Acesso Negado: A geração de 8 variações é exclusiva para usuários Premium.";
+                errorMessage.classList.remove('hidden');
+                // Adiciona a classe de erro para indicar falha
+                errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                return;
+            }
+            if (!editPrompt) {
+                errorMessage.textContent = "Por favor, forneça uma descrição de edição (ex: 'Mude de dia para noite, adicione neve').";
+                errorMessage.classList.remove('hidden');
+                // Adiciona a classe de erro para indicar falha
+                errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                return;
+            }
+            if (!currentImageBase64 || !currentImageMimeType) {
+                errorMessage.textContent = "Erro: Nenhuma imagem de origem foi selecionada para edição.";
+                errorMessage.classList.remove('hidden');
+                 // Adiciona a classe de erro para indicar falha
+                errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                return;
+            }
+
+            resetUiBeforeGenerate(); 
+            loadingText.textContent = `Aplicando a edição "${editPrompt}" em ${numImages} variações...`;
+            
+            let imageResults = [];
+            
+            try {
+                // PROMPT PRINCIPAL REFORÇADO PARA EDIÇÃO
+                const fullPrompt = `Com base na imagem de entrada, faça esta modificação: ${editPrompt}. Mantenha o produto central e **a logo/design original intactos**. Mude apenas o cenário, iluminação ou atmosfera conforme solicitado.`;
+
+                const payload = {
+                    contents: [
+                        {
+                            parts: [
+                                { text: fullPrompt },
+                                {
+                                    inlineData: {
+                                        mimeType: currentImageMimeType,
+                                        data: currentImageBase64
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    // INSTRUÇÃO CRÍTICA TAMBÉM NA EDIÇÃO
+                    systemInstruction: {
+                        parts: [{ text: CRITICAL_SYSTEM_INSTRUCTION }]
+                    },
+                    generationConfig: {
+                        responseModalities: ['TEXT', 'IMAGE']
+                    }
+                };
+                
+                if(editResultsContainer) editResultsContainer.innerHTML = ''; 
+
+                for (let i = 0; i < numImages; i++) {
+                    if (isCancelled) {
+                        break; 
+                    }
+
+                    loadingText.textContent = `Gerando edição ${i + 1} de ${numImages}...`;
+                    
+                    const apiCall = () => fetch(imageApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const response = await fetchWithBackoff(apiCall);
+                    const result = await response.json();
+
+                    const candidate = result.candidates?.[0];
+                    const base64Data = candidate?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                    if (base64Data) {
+                        imageResults.push(base64Data);
+                    } else {
+                        console.warn(`Edição da imagem ${i + 1} falhou. Tentando próxima...`);
+                    }
+                }
+                
+                if (isCancelled) {
+                    closeEditor(); 
+                    return;
+                }
+
+                if (imageResults.length > 0) {
+                    // Limpa resultados anteriores e insere o contêiner
+                    const editContainer = document.getElementById('editResultsContainer');
+
+                    if(editContainer) editContainer.innerHTML = '';
+
+                    imageResults.forEach((base64Data, index) => {
+                        if (base64Data) {
+                            const mime = 'image/png';
+                            
+                            editContainer.innerHTML += createMockupCardHTML(base64Data, mime, index + 1, true);
+                        }
+                    });
+                    
+                    finalizeUiAfterGenerate(true);
+
+                } else {
+                    errorMessage.textContent = "A edição da imagem falhou. Tente um prompt de edição diferente.";
+                    errorMessage.classList.remove('hidden');
+                    // Garante que a mensagem de erro seja vermelha
+                    errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                    errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                    finalizeUiAfterGenerate(false);
+                }
+
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error("Erro completo durante a edição:", error);
+                    errorMessage.textContent = `Erro ao editar mockup: ${error.message}.`;
+                    errorMessage.classList.remove('hidden');
+                     // Garante que a mensagem de erro seja vermelha
+                    errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                    errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                }
+                finalizeUiAfterGenerate(false);
+            }
+        }
+        
+        
+        /**
+         * 6.4 Cria o HTML do Card de Mockup (SEM OPÇÃO DE FUNDO TRANSPARENTE)
+         */
+        function createMockupCardHTML(base64Data, mime, index, isEditResult = false) {
+             const imageUrl = `data:${mime};base64,${base64Data}`;
+             const downloadFileName = isEditResult 
+                ? `ninjamockup_ai_edit_${Date.now()}_${index}.png`
+                : `ninjamockup_ai_gen_${Date.now()}_${index}.png`;
+            
+            return `
+                <div class="relative group rounded-xl overflow-hidden shadow-2xl cursor-pointer" onclick="openModal('${imageUrl}')">
+                    <img src="${imageUrl}" alt="Mockup ${isEditResult ? 'Editado' : 'Gerado'} ${index}" class="w-full w-full h-auto object-cover rounded-xl transition duration-500 ease-in-out group-hover:scale-105" />
+                    
+                    <div class="absolute bottom-2 left-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition duration-300">
+                        <!-- Botão de Edição (CYAN) -->
+                        <button onclick="event.stopPropagation(); openEditor('${base64Data}', '${mime}')" 
+                                class="px-3 py-1 text-xs font-bold rounded-full bg-cyan-600 text-white hover:bg-cyan-700">
+                            ✏️ Editar
+                        </button>
+                    </div>
+                    
+                    <!-- Botão de Download (VIOLET) -->
+                    <a href="${imageUrl}" download="${downloadFileName}" 
+                       class="absolute top-2 right-2 p-2 bg-violet-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition duration-300 transform group-hover:translate-y-0 -translate-y-2 hover:bg-violet-700" 
+                       onclick="event.stopPropagation()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L10 11.586l1.293-1.293a1 1 0 111.414 1.414l-2 2a1 1 0 01-1.414 0l-2-2a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v7a1 1 0 11-2 0V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+            `;
+        }
+        
+        // --- 7. Lógica de Cancelamento e Geração de Imagem (Ajustada) ---
+
+        // NOVO: Função para lidar com o cancelamento
+        function handleCancel() {
+            isCancelled = true;
+            errorMessage.textContent = "Processo cancelado pelo usuário. Por favor, tente novamente.";
+            errorMessage.classList.remove('hidden');
+            errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700'); 
+            errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+            // Garante que o UI volte ao estado inicial (botão Gerar visível)
+            finalizeUiAfterGenerate(false); 
+        }
+
+        function resetUiBeforeGenerate() {
+            isCancelled = false; // Reseta a flag de cancelamento
+            errorMessage.textContent = '';
+            // Limpa TODAS as classes de cor de erro/aviso
+            errorMessage.classList.remove('hidden', 'bg-red-800/30', 'bg-yellow-900/40', 'text-red-300', 'text-yellow-300', 'border-red-700', 'border-yellow-700');
+            
+            llmMessageArea.classList.add('hidden'); 
+            ideaResultsContainer.innerHTML = ''; 
+            initialMessage.classList.add('hidden');
+            
+            // Se estiver no painel de geração, limpa os resultados
+            if (!generationPanel.classList.contains('hidden')) {
+                resultArea.innerHTML = '';
+                generateButton.classList.add('hidden');
+                generateAgainButton.classList.add('hidden');
+            } else {
+                 // Se estiver no painel de edição, apenas limpa a parte dos resultados de edição (abaixo da imagem de ref)
+                 const editResultsContainer = document.getElementById('editResultsContainer');
+                 if (editResultsContainer) editResultsContainer.innerHTML = '';
+            }
+            
+            loadingDiv.classList.remove('hidden');
+        }
+        
+        function finalizeUiAfterGenerate(success) {
+            loadingDiv.classList.add('hidden');
+            
+            // Se estiver no painel de geração, ajusta os botões principais
+            if (!generationPanel.classList.contains('hidden')) {
+                if (success && !isCancelled) {
+                    generateAgainButton.classList.remove('hidden');
+                    generateButton.classList.add('hidden');
+                } else {
+                    generateButton.classList.remove('hidden');
+                    generateAgainButton.classList.add('hidden');
+                }
+            }
+        }
+
+        /**
+         * Lógica de Geração Principal, reforçada para garantir o uso da logo e o estilo realista.
+         */
+        async function handleGenerate() {
+            const file = logoImageInput.files[0];
+            const customPrompt = promptInput.value.trim();
+            const selectedStyle = selectedStyleInput.value; // Deve ser sempre 'realista'
+            const numImages = parseInt(imageCountInput.value, 10); // Quantidade de imagens a gerar
+
+            // VERIFICAÇÕES
+            if (numImages === 8 && !isPremium) {
+                errorMessage.textContent = "Acesso Negado: A geração de 8 imagens é exclusiva para usuários Premium. Por favor, faça login ou atualize seu plano.";
+                errorMessage.classList.remove('hidden');
+                errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                generateButton.classList.remove('hidden'); 
+                return;
+            }
+
+            if (!file) {
+                errorMessage.textContent = "Erro: Por favor, envie uma imagem de logo.";
+                errorMessage.classList.remove('hidden');
+                errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                generateButton.classList.remove('hidden');
+                return;
+            }
+
+            resetUiBeforeGenerate();
+
+            let imageResults = [];
+            let payload = null; 
+            let base64Image, mimeType;
+
+            try {
+                // 1. Configurar o payload base
+                base64Image = await fileToBase64(file);
+                mimeType = file.type;
+                
+                let finalPromptContext;
+                
+                // --- LÓGICA DE PROMPT ---
+                if (customPrompt) {
+                    finalPromptContext = customPrompt;
+                } else {
+                    finalPromptContext = FALLBACK_PROMPT;
+                }
+                
+                // Prompt principal que força o Image-to-Image (Regra: Apenas coloca a imagem em um mockup).
+                const fullPrompt = `Gere um MOCKUP FOTORREALISTA de alta resolução. A imagem de entrada é a LOGO. Aplique a LOGO exatamente como é, com textura e perspectiva no produto descrito pelo CONTEXTO: ${finalPromptContext}.`;
+
+
+                payload = {
+                    contents: [
+                        {
+                            parts: [
+                                { text: fullPrompt },
+                                {
+                                    inlineData: {
+                                        mimeType: mimeType,
+                                        data: base64Image
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    // INSTRUÇÃO DE SISTEMA CRÍTICA
+                    systemInstruction: {
+                        parts: [{ text: CRITICAL_SYSTEM_INSTRUCTION }]
+                    },
+                    generationConfig: {
+                        responseModalities: ['TEXT', 'IMAGE']
+                    }
+                };
+                // --- FIM DA LÓGICA DE PROMPT ---
+
+
+                // 2. Loop para gerar N imagens
+                for (let i = 0; i < numImages; i++) {
+                    if (isCancelled) {
+                        break; 
+                    }
+
+                    loadingText.textContent = `Gerando imagem ${i + 1} de ${numImages} com NinjaMockup.ai...`;
+                    
+                    // Chamar a API
+                    const apiCall = () => fetch(imageApiUrl, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const response = await fetchWithBackoff(apiCall);
+                    const result = await response.json();
+
+                    const candidate = result.candidates?.[0];
+                    const base64Data = candidate?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                    if (base64Data) {
+                        imageResults.push(base64Data);
+                    } else {
+                        console.warn(`Geração da imagem ${i + 1} falhou. Tentando próxima...`);
+                    }
+                }
+
+                if (isCancelled) {
+                    finalizeUiAfterGenerate(false); 
+                    return;
+                }
+
+                // 3. Exibir resultados ou TENTAR FALLBACK
+                if (imageResults.length > 0) {
+                    // SUCESSO (ou sucesso parcial)
+                    const mime = 'image/png'; 
+                    imageResults.forEach((base64Data, index) => {
+                         resultArea.innerHTML += createMockupCardHTML(base64Data, mime, index + 1);
+                    });
+                    finalizeUiAfterGenerate(true);
+
+                } else {
+                    // FALHA TOTAL NA GERAÇÃO ORIGINAL - INICIAR FALLBACK
+                    
+                    let fallbackSuccess = false;
+                    let fallbackMessage = "";
+                    
+                    // Prompt mais básico possível, focado apenas em aplicar a logo.
+                    const fallbackPrompt = "Aplique a logo de entrada em uma embalagem genérica, moderna e limpa, com iluminação de estúdio branca. Foco no produto. Resolução 8K.";
+                    loadingText.textContent = `A geração original falhou. Tentando gerar uma imagem de fallback básica...`;
+
+                    try {
+                        const fallbackPayload = {
+                            contents: [
+                                {
+                                    parts: [
+                                        { text: fallbackPrompt },
+                                        {
+                                            inlineData: {
+                                                mimeType: mimeType, 
+                                                data: base64Image 
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            systemInstruction: {
+                                parts: [{ text: CRITICAL_SYSTEM_INSTRUCTION }] // MANTÉM a instrução crítica
+                            },
+                            generationConfig: {
+                                responseModalities: ['TEXT', 'IMAGE']
+                            }
+                        };
+
+                        const apiCall = () => fetch(imageApiUrl, { 
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(fallbackPayload)
+                        });
+
+                        const response = await fetchWithBackoff(apiCall);
+                        const result = await response.json();
+
+                        const base64Data = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                        if (base64Data) {
+                            imageResults.push(base64Data);
+                            fallbackSuccess = true;
+                            fallbackMessage = "Atenção: Seu prompt original falhou. Geramos um mockup de **fallback** simples e limpo para evitar o erro. Tente simplificar ou ajustar sua descrição para a próxima tentativa.";
+                        }
+                    } catch(err) {
+                         console.error("Erro durante o fallback:", err);
+                         fallbackMessage = `Falha total. O prompt original e o fallback falharam. Erro final: ${err.message}.`;
+                    }
+
+                    // FINAL CHECK APÓS FALLBACK
+                    if (fallbackSuccess) {
+                        // Exibir o resultado único de fallback
+                        resultArea.innerHTML = ''; 
+                        const mime = 'image/png'; 
+                        imageResults.forEach((base64Data, index) => {
+                             resultArea.innerHTML += createMockupCardHTML(base64Data, mime, index + 1);
+                        });
+                        
+                        // Mostrar a mensagem de aviso (Amarela)
+                        errorMessage.textContent = fallbackMessage;
+                        errorMessage.classList.remove('hidden');
+                        errorMessage.classList.remove('bg-red-800/30', 'text-red-300', 'border-red-700'); 
+                        errorMessage.classList.add('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700'); 
+                        
+                        finalizeUiAfterGenerate(true);
+
+                    } else {
+                        // Falha ABSOLUTA (Original + Fallback)
+                        errorMessage.textContent = fallbackMessage.includes("Falha total") 
+                            ? fallbackMessage 
+                            : "O NinjaMockup.ai não conseguiu gerar nenhuma imagem. Tente um prompt diferente ou verifique sua imagem de logo.";
+                            
+                        errorMessage.classList.remove('hidden', 'bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                        errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                        initialMessage.classList.remove('hidden');
+                        finalizeUiAfterGenerate(false);
+                    }
+                }
+
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error("Erro completo durante a geração:", error);
+                    errorMessage.textContent = `Erro ao gerar mockup: ${error.message}. Por favor, verifique sua entrada e tente novamente.`;
+                    errorMessage.classList.remove('hidden');
+                    errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                    initialMessage.classList.remove('hidden');
+                }
+                finalizeUiAfterGenerate(false);
+            }
+        }
+        
+        // --- 8. Event Listeners e Inicialização ---
+
+        // Listener para mudar o estado do UI quando o usuário muda o seletor (Geração)
+        imageCountInput.addEventListener('change', () => {
+             const count = parseInt(imageCountInput.value, 10);
+             if (count === 8 && !isPremium) {
+                 premiumMessage.classList.remove('hidden');
+                 errorMessage.textContent = "A geração de 8 imagens é um recurso Premium.";
+                 errorMessage.classList.remove('hidden');
+                 errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                 errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                 imageCountInput.value = '4'; // Volta para o máximo permitido
+             } else {
+                 premiumMessage.classList.add('hidden');
+                 errorMessage.classList.add('hidden'); // Limpa o erro se mudou
+             }
+             
+             // Ajusta o layout do grid
+             if (count > 2) {
+                 resultArea.className = "grid grid-cols-2 gap-4 w-full";
+             } else {
+                 resultArea.className = "grid grid-cols-1 gap-4 w-full";
+             }
+             initialMessage.textContent = `Os ${count} mockups gerados aparecerão aqui após a criação.`;
+        });
+        
+        // Listener para o painel de edição para verificar o status premium (Não precisa mais atualizar o texto do botão)
+        editImageCountInput.addEventListener('change', () => {
+             const count = parseInt(editImageCountInput.value, 10);
+             
+             if (count === 8 && !isPremium) {
+                 editPremiumMessage.classList.remove('hidden');
+                 errorMessage.textContent = "A edição de 8 variações é um recurso Premium.";
+                 errorMessage.classList.remove('hidden');
+                 errorMessage.classList.remove('bg-yellow-900/40', 'text-yellow-300', 'border-yellow-700');
+                 errorMessage.classList.add('bg-red-800/30', 'text-red-300', 'border-red-700');
+                 editImageCountInput.value = '4'; // Volta para o máximo permitido
+             } else {
+                 editPremiumMessage.classList.add('hidden');
+                 errorMessage.classList.add('hidden'); 
+             }
+        });
+
+
+        // Adiciona listeners aos botões de geração, edição e cancelamento
+        generateButton.addEventListener('click', handleGenerate);
+        generateAgainButton.addEventListener('click', handleGenerate);
+        cancelButton.addEventListener('click', handleCancel); 
+        
+        // Listeners do Painel de Edição
+        startEditButton.addEventListener('click', handleEditImage);
+        backToGenerateButton.addEventListener('click', closeEditor);
+
+        // Listener para a funcionalidade LLM (apenas Melhorar Prompt)
+        improvePromptButton.addEventListener('click', handleImprovePrompt);
+        
+        // Listener para o botão de conta
+        accountButton.addEventListener('click', toggleAccountPopup);
+
+
+        // Inicializa o app
+        setupFirebase();
+        renderPresetExamples();
+        
+        // Assegura que o botão principal esteja visível na carga inicial
+        generateButton.classList.remove('hidden');
+        
+        // Inicializa o layout do grid (para 1 imagem padrão)
+        resultArea.className = "grid grid-cols-1 gap-4 w-full";
+    </script>
+</body>
+</html>
